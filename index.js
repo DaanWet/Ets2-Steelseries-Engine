@@ -17,9 +17,13 @@ const heavyLightEvent = new gamesense.GameEvent("HEAVY_LIGHTS")
 const beaconEvent = new gamesense.GameEvent('BEACON_LIGHTS')
 const speedEvent = new gamesense.GameEvent('SPEED')
 speedEvent.maxValue = 90
+const speedLimitEvent = new gamesense.GameEvent('SPEED_LIMIT')
 
+let interval;
 
-client.registerGame()
+function startapp(){
+    console.log("Connected")
+    client.registerGame()
     .then(bindBrake)
     .then(bindRightBlinker)
     .then(bindLeftBlinker)
@@ -27,8 +31,15 @@ client.registerGame()
     .then(bindHeavyLights)
     .then(bindBeacon)
     .then(bindSpeed)
+    .then(bindSpeedLimit)
     .then(startEventUpdates)
     .catch((err) => console.log(err));
+}
+
+startapp();
+
+
+
 
 
 function bindBrake() {
@@ -66,24 +77,53 @@ function bindSpeed() {
     handler.mode = gamesense.VisualizationMode.PERCENT
     return client.bindEvent(speedEvent, [handler])
 }
+function bindSpeedLimit(){
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.BACKSPACE, colors.red)
+    handler.customZoneKeys = [42, 45, 46]
+    handler.rate = new gamesense.FlashEffectFrequency(1)
+    return client.bindEvent(speedLimitEvent, [handler])
+}
 
 
 
 
 function startEventUpdates(){
-    setInterval(updateValues, 50);
+    interval = setInterval(updateValues, 50);
 }
+function lookForGame(){
+    axios.get(URL)
+    .then(res => {
+        console.log("looking")
+        if (res.data.game.connected){
+            clearInterval(interval)
+            setTimeout(startapp, 1000);
+        }
+    });
+}
+
 function updateValues(){
     axios.get(URL)
     .then(res => {
-        let truck = res.data.truck;
-        updateBooleanValue(parkBrakeEvent, truck.parkBrakeOn);
-        updateBooleanValue(leftBlinkerEvent, truck.blinkerLeftOn);
-        updateBooleanValue(rightBlinkerEvent, truck.blinkerRightOn);
-        updateValue(lightsEvent, truck.lightsParkingOn ? truck.lightsBeamLowOn ? 100 : 50 : 0)
-        updateBooleanValue(heavyLightEvent, truck.lightsBeamHighOn)
-        updateBooleanValue(beaconEvent, truck.lightsBeaconOn)
-        updateValue(speedEvent, truck.speed)
+        if (!res.data.game.connected){
+            console.log("Disconnected")
+            clearInterval(interval)
+            client.removeGame();
+            setTimeout(() => {
+                interval = setInterval(lookForGame, 5000)
+            }, 1000)
+            
+        } else {
+            let truck = res.data.truck;
+            updateBooleanValue(parkBrakeEvent, truck.parkBrakeOn);
+            updateBooleanValue(leftBlinkerEvent, truck.blinkerLeftOn);
+            updateBooleanValue(rightBlinkerEvent, truck.blinkerRightOn);
+            updateValue(lightsEvent, truck.lightsParkingOn ? truck.lightsBeamLowOn ? 100 : 50 : 0)
+            updateBooleanValue(heavyLightEvent, truck.lightsBeamHighOn)
+            updateBooleanValue(beaconEvent, truck.lightsBeaconOn)
+            updateValue(speedEvent, truck.speed)
+            let overspeedLimit = Number(truck.speed)  >= Number(res.data.navigation.speedLimit + 5)
+            updateBooleanValue(speedLimitEvent, overspeedLimit)
+        }
     })
     .catch(err => console.log(err))
 }

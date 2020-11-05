@@ -12,9 +12,11 @@ const parkBrakeEvent = new gamesense.GameEvent('BRAKE_ACTIVE')
 const leftBlinkerEvent = new gamesense.GameEvent('LEFT_BLINKER')
 const rightBlinkerEvent = new gamesense.GameEvent('RIGHT_BLINKER')
 const lightsEvent = new gamesense.GameEvent('LIGHTS_ON')
-lightsEvent.maxValue = 1
-
-
+lightsEvent.maxValue = 100
+const heavyLightEvent = new gamesense.GameEvent("HEAVY_LIGHTS")
+const beaconEvent = new gamesense.GameEvent('BEACON_LIGHTS')
+const speedEvent = new gamesense.GameEvent('SPEED')
+speedEvent.maxValue = 90
 
 
 client.registerGame()
@@ -22,26 +24,47 @@ client.registerGame()
     .then(bindRightBlinker)
     .then(bindLeftBlinker)
     .then(bindLights)
+    .then(bindHeavyLights)
+    .then(bindBeacon)
+    .then(bindSpeed)
     .then(startEventUpdates)
     .catch((err) => console.log(err));
 
 
 function bindBrake() {
-    let redSpaceHandler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.SPACEBAR, colors.red);
-    return client.bindEvent(parkBrakeEvent, [redSpaceHandler])
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.SPACEBAR, colors.red);
+    return client.bindEvent(parkBrakeEvent, [handler])
 }
 function bindLeftBlinker(){
-    let greenLHandler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.LEFT_BRACKET, colors.green)
-    return client.bindEvent(leftBlinkerEvent, [greenLHandler])
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.LEFT_BRACKET, colors.green)
+    return client.bindEvent(leftBlinkerEvent, [handler])
 }
 function bindRightBlinker(){
-    let greenLHandler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.RIGHT_BRACKET, colors.green)
-    return client.bindEvent(rightBlinkerEvent, [greenLHandler])
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.RIGHT_BRACKET, colors.green)
+    return client.bindEvent(rightBlinkerEvent, [handler])
 }
 function bindLights() {
-    let lightsHandler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.L, colors.yellow)
-    lightsHandler.mode = gamesense.VisualizationMode.PERCENT
-    new client.bindEvent(lightsEvent, [lightsHandler])
+    let lightsRange = new gamesense.ColorRanges([
+        new gamesense.ColorRange(0, 33, colors.black),
+        new gamesense.ColorRange(34, 66, colors.halfYellow),
+        new gamesense.ColorRange(67, 100, colors.yellow)
+    ])
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.L, lightsRange)
+    return client.bindEvent(lightsEvent, [handler])
+}
+function bindHeavyLights() {
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.K, colors.blue)
+    return client.bindEvent(heavyLightEvent, [handler])
+}
+function bindBeacon() {
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.RgbPerKeyZone.O, colors.orange)
+    handler.rate = new gamesense.FlashEffectFrequency(0.5)
+    return client.bindEvent(beaconEvent, [handler])
+}
+function bindSpeed() {
+    let handler = new gamesense.GameEventHandler(gamesense.DeviceType.KEYBOARD, gamesense.KeyboardZone.NUMBER_KEYS, colors.green)
+    handler.mode = gamesense.VisualizationMode.PERCENT
+    return client.bindEvent(speedEvent, [handler])
 }
 
 
@@ -57,7 +80,10 @@ function updateValues(){
         updateBooleanValue(parkBrakeEvent, truck.parkBrakeOn);
         updateBooleanValue(leftBlinkerEvent, truck.blinkerLeftOn);
         updateBooleanValue(rightBlinkerEvent, truck.blinkerRightOn);
-        updateValue(lightsEvent, truck.lightsBeamLowOn ? truck.lightsBeamHighOn ? 1 : 0.5 : 0)
+        updateValue(lightsEvent, truck.lightsParkingOn ? truck.lightsBeamLowOn ? 100 : 50 : 0)
+        updateBooleanValue(heavyLightEvent, truck.lightsBeamHighOn)
+        updateBooleanValue(beaconEvent, truck.lightsBeaconOn)
+        updateValue(speedEvent, truck.speed)
     })
     .catch(err => console.log(err))
 }

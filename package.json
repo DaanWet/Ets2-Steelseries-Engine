@@ -1,0 +1,16 @@
+{
+  "name": "ets2-steelseries-engine-epp",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Damascus",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.0",
+    "express": "^4.17.1",
+    "gamesense-client": "^1.0.0"
+  }
+}
